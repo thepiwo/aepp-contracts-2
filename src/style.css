@@ -11,3 +11,7 @@
     @apply text-xl;
   }
 }
+
+.cm-editor {
+  background-color: black;
+}
