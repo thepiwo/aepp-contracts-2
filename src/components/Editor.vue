@@ -527,6 +527,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { generateKeyPair, getAddressFromPriv } from "@aeternity/aepp-sdk";
 import { EditorView } from "codemirror";
 import { useStore } from "vuex";
+import BigNumber from "bignumber.js";
 
 const store = useStore();
 
@@ -606,10 +607,16 @@ async function compile(
   }
 }
 
+const argsStringToArgs = (argsString: string) => {
+  return argsString.trim() === ""
+    ? []
+    : argsString.split(",").map((arg) => {
+        return arg.trim();
+      });
+};
+
 async function deploy(argsString: string, options = {}) {
-  const args = argsString.split(",").map((arg) => {
-    return arg.trim();
-  });
+  const args = argsStringToArgs(argsString);
 
   console.log(`Deploying contract...`);
   try {
@@ -622,7 +629,8 @@ async function deploy(argsString: string, options = {}) {
     options = Object.fromEntries(
       Object.entries(options).filter(([_, v]) => v != null)
     );
-    deployedContractInstance.value = await contractInstance?.init(
+    debugger;
+    deployedContractInstance.value = await contractInstance.$deploy(
       args,
       options
     );
@@ -687,7 +695,6 @@ function onCompile() {
   saveContract();
   resetData();
   compile(contractCode.value).then((result) => {
-    debugger;
     contractAddress.value = undefined;
     byteCode.value = result?.bytecode;
 
@@ -754,32 +761,19 @@ function onCallDataAndFunction() {
 }
 
 async function getClient() {
-  clientError.value = undefined;
-  try {
-    console.log(secretKey.value, publicKey.value);
-    if (secretKey.value && publicKey.value)
-      await store.commit("aeSdk/initSdk", secretKey.value);
+  await store.dispatch(
+    "aeSdk/initSdk",
+    isStatic.value ? secretKey.value : undefined
+  );
 
-    isConnected.value = true;
-    nodeUrl.value = store.state["aeSdk/networkId"]
-      ? store.getters["aeSdk/aeSdk"].api.$host || nodeUrl.value
-      : nodeUrl.value;
+  isConnected.value = true;
+  nodeUrl.value = store.state.aeSdk.networkId
+    ? store.getters["aeSdk/aeSdk"].api.$host || nodeUrl.value
+    : nodeUrl.value;
 
-    isStatic.value = true;
-    if (
-      store.state["aeSdk/networkId"] === "ae_uat" &&
-      store.state["aeSdk/address"] &&
-      ((await store.getters["aeSdk/aeSdk"].getBalance(
-        store.state["aeSdk/address"],
-        {}
-      )) || 0) < 10000000000000000
-    )
-      await fundAccount(store.state["aeSdk/address"]);
-  } catch (err: any) {
-    clientError.value = err.toString().includes("404")
-      ? "Account not found"
-      : err;
-  }
+  isStatic.value = true;
+
+  await fundAccountIfNeeded();
 }
 
 function getSecretKey() {
@@ -788,11 +782,23 @@ function getSecretKey() {
   );
 }
 
-async function fundAccount(publicKey: string) {
-  await fetch(`https://testnet.faucet.aepps.com/account/${publicKey}`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-  }).catch(console.error);
+async function fundAccountIfNeeded() {
+  const address = store.state.aeSdk.address;
+  const networkId = store.state.aeSdk.networkId;
+
+  const balance = address
+    ? await store.getters["aeSdk/aeSdk"].getBalance(address)
+    : 0;
+
+  if (
+    networkId === "ae_uat" &&
+    address &&
+    new BigNumber(10000000000000000).gt(balance)
+  ) {
+    await fetch(`https://faucet.aepps.com/account/${address}`, {
+      method: "POST",
+    }).catch(console.error);
+  }
 }
 
 async function createKeypair() {
@@ -802,12 +808,13 @@ async function createKeypair() {
   if (secretKey.value)
     window.localStorage.setItem("secret-key", secretKey.value);
 
-  if (publicKey.value) await fundAccount(publicKey.value);
+  await fundAccountIfNeeded();
   await getClient();
   modifySettings.value = false;
 }
 
 async function saveSettings() {
+  isStatic.value = true;
   if (secretKey.value)
     window.localStorage.setItem("secret-key", secretKey.value);
 
@@ -854,7 +861,7 @@ function atAddress() {
       ...opts,
       address: `ct_${contractAddress.value?.replace("ct_", "")}`,
     })
-    .then((data) => {
+    .then((data: any) => {
       deployInfo.value = `Instantiated Contract at address: ${contractAddress.value}`;
       miningStatus.value = false;
       deployedContractInstance.value = data;
@@ -876,17 +883,19 @@ function resetContract() {
 
 async function initExtension() {
   isConnected.value = true;
-  nodeUrl.value = store.state["aeSdk/networkId"].value
+  nodeUrl.value = store.state.aeSdk.networkId
     ? store.getters["aeSdk/aeSdk"].api.$host
     : undefined;
+
   isStatic.value = false;
+  await getClient();
 }
 
 onMounted(async () => {
   try {
-    store.commit("aeSdk/initSdk");
     secretKey.value = getSecretKey();
-    if (secretKey.value) publicKey.value = getAddressFromPriv(secretKey.value);
+    publicKey.value = getAddressFromPriv(secretKey.value);
+
     getContract();
     await getClient();
   } catch (e) {

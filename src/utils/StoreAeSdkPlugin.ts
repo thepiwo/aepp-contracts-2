@@ -4,7 +4,7 @@ import {
   AeSdk,
   MemoryAccount,
 } from "@aeternity/aepp-sdk";
-import { Store } from "vuex";
+import { Dispatch, Store } from "vuex";
 import { COMPILER_URL, nodes } from "./config";
 
 enum Status {
@@ -19,7 +19,7 @@ export interface State {
   networkId: undefined | string;
 }
 
-const state: State = {
+const initialState: State = {
   status: Status.UNINITIALIZED,
   address: undefined,
   networkId: undefined,
@@ -28,7 +28,7 @@ const state: State = {
 export default (store: Store<State>) => {
   let aeSdk: AeSdkAepp | AeSdk | undefined;
 
-  const initAeSdkAepp = () => {
+  const initAeSdkAepp = (dispatch: Dispatch) => {
     aeSdk = new AeSdkAepp({
       name: "Contract Editor",
       nodes,
@@ -39,10 +39,10 @@ export default (store: Store<State>) => {
             (node) => node.nodeNetworkId === networkId
           );
           aeSdk?.selectNode(name);
-          store.commit("aeSdk/updateConnectionInfo");
+          dispatch("updateConnectionInfo");
         }
       },
-      onAddressChange: () => store.commit("aeSdk/updateConnectionInfo"),
+      onAddressChange: () => dispatch("updateConnectionInfo"),
       onDisconnect: () => alert("Aepp is disconnected"),
     });
   };
@@ -60,20 +60,30 @@ export default (store: Store<State>) => {
     getters: {
       aeSdk: () => aeSdk,
     },
-    state,
-    mutations: {
-      initSdk(state, secretKey?) {
-        if (secretKey) initAeSdk(secretKey);
-        else initAeSdkAepp();
+    state: initialState,
+    actions: {
+      async updateConnectionInfo({ commit }) {
+        commit("setStatus", Status.FETCHING_INFO);
+        commit("setNetworkId", await aeSdk?.api?.getNetworkId());
+        commit("setAddress", aeSdk?.address);
+        commit("setStatus", Status.CONNECTED);
       },
-      setAddress(state, address) {
+      async initSdk({ dispatch }, secretKey?: string | undefined) {
+        if (secretKey) initAeSdk(secretKey);
+        else initAeSdkAepp(dispatch);
+
+        await dispatch("updateConnectionInfo");
+      },
+    },
+    mutations: {
+      setAddress(state: State, address: string) {
         state.address = address;
       },
-      async updateConnectionInfo(state) {
-        state.status = Status.FETCHING_INFO;
-        state.networkId = await aeSdk?.api?.getNetworkId();
-        state.address = aeSdk?.address;
-        state.status = Status.CONNECTED;
+      setNetworkId(state: State, networkId: string) {
+        state.networkId = networkId;
+      },
+      setStatus(state: State, status: Status) {
+        state.status = status;
       },
     },
   });
