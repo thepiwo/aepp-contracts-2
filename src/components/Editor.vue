@@ -524,9 +524,11 @@ import { onMounted, Ref, ref, shallowRef, UnwrapRef } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
-import { account, initWallet, networkId, sdk } from "../utils/wallet";
 import { generateKeyPair, getAddressFromPriv } from "@aeternity/aepp-sdk";
 import { EditorView } from "codemirror";
+import { useStore } from "vuex";
+
+const store = useStore();
 
 const extensions = [javascript(), oneDark];
 
@@ -593,7 +595,7 @@ async function compile(
 ): Promise<{ bytecode: string; aci: object } | undefined> {
   console.log(`Compiling contract...`);
   try {
-    return sdk.value?.compilerApi.compileBySourceCode(code);
+    return store.getters["aeSdk/aeSdk"].compilerApi.compileBySourceCode(code);
   } catch (err: any) {
     return Promise.reject(
       (compileError.value =
@@ -611,7 +613,9 @@ async function deploy(argsString: string, options = {}) {
 
   console.log(`Deploying contract...`);
   try {
-    const contractInstance = await sdk.value?.initializeContract({
+    const contractInstance = await store.getters[
+      "aeSdk/aeSdk"
+    ].initializeContract({
       sourceCode: contractCode.value,
     });
     // eslint-disable-next-line no-unused-vars
@@ -753,21 +757,24 @@ async function getClient() {
   clientError.value = undefined;
   try {
     console.log(secretKey.value, publicKey.value);
-    if (secretKey.value && publicKey.value) await initWallet(secretKey.value);
+    if (secretKey.value && publicKey.value)
+      await store.commit("aeSdk/initSdk", secretKey.value);
 
     isConnected.value = true;
-    nodeUrl.value = networkId.value
-      ? sdk.value?.api.$host || nodeUrl.value
+    nodeUrl.value = store.state["aeSdk/networkId"]
+      ? store.getters["aeSdk/aeSdk"].api.$host || nodeUrl.value
       : nodeUrl.value;
 
     isStatic.value = true;
     if (
-      networkId.value === "ae_uat" &&
-      account.value &&
-      ((await sdk.value?.getBalance(account.value, {})) || 0) <
-        10000000000000000
+      store.state["aeSdk/networkId"] === "ae_uat" &&
+      store.state["aeSdk/address"] &&
+      ((await store.getters["aeSdk/aeSdk"].getBalance(
+        store.state["aeSdk/address"],
+        {}
+      )) || 0) < 10000000000000000
     )
-      await fundAccount(account.value);
+      await fundAccount(store.state["aeSdk/address"]);
   } catch (err: any) {
     clientError.value = err.toString().includes("404")
       ? "Account not found"
@@ -825,9 +832,7 @@ function getContract() {
     : undefined;
 
   contractAddress.value = window.localStorage.getItem("contract-address")
-    ? (window.localStorage.getItem(
-        "contract-address"
-      ) as Encoded.ContractAddress) || undefined
+    ? window.localStorage.getItem("contract-address") || undefined
     : undefined;
 }
 
@@ -840,12 +845,12 @@ function atAddress() {
   deployInfo.value = "Instantiating Contract at address ...";
   miningStatus.value = true;
 
-  const opts = aci.value
+  const opts: { aci: any } | { source: string } = aci.value
     ? { aci: JSON.parse(aci.value) }
     : { source: contractCode.value };
 
-  sdk.value
-    ?.initializeContract({
+  store.getters["aeSdk/aeSdk"]
+    .initializeContract({
       ...opts,
       address: `ct_${contractAddress.value?.replace("ct_", "")}`,
     })
@@ -870,14 +875,16 @@ function resetContract() {
 }
 
 async function initExtension() {
-  await initWallet();
   isConnected.value = true;
-  nodeUrl.value = networkId.value ? sdk.value?.api.$host : undefined;
+  nodeUrl.value = store.state["aeSdk/networkId"].value
+    ? store.getters["aeSdk/aeSdk"].api.$host
+    : undefined;
   isStatic.value = false;
 }
 
 onMounted(async () => {
   try {
+    store.commit("aeSdk/initSdk");
     secretKey.value = getSecretKey();
     if (secretKey.value) publicKey.value = getAddressFromPriv(secretKey.value);
     getContract();
