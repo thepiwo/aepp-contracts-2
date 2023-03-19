@@ -180,8 +180,8 @@
             <span
               class="block w-full text-xs"
               v-bind:class="{
-                'text-red': !deployedContractInstance,
-                'text-green': deployedContractInstance,
+                'text-red': !contractInstance,
+                'text-green': contractInstance,
               }"
             >
               {{ deployInfo }}
@@ -385,7 +385,7 @@
       </div>
 
       <div
-        v-if="deployedContractInstance && byteCode"
+        v-if="contractInstance && byteCode"
         class="w-full p-4 bg-gray-200 rounded-sm shadow mb-8"
       >
         <h2 class="py-2">⬆ Call Function</h2>
@@ -553,7 +553,7 @@ const byteCode: Ref<UnwrapRef<string | undefined>> = ref("");
 const nodeUrl: Ref<UnwrapRef<string | undefined>> = ref(
   "https://testnet.aeternity.io"
 );
-const deployedContractInstance: Ref<any | undefined> = ref();
+const contractInstance: Ref<any | undefined> = ref();
 const deployInfo = ref("");
 const minedData = ref(false);
 const miningStatus = ref(false);
@@ -620,7 +620,7 @@ async function deploy(argsString: string, options = {}) {
 
   console.log(`Deploying contract...`);
   try {
-    const contractInstance = await store.getters[
+    contractInstance.value = await store.getters[
       "aeSdk/aeSdk"
     ].initializeContract({
       sourceCode: contractCode.value,
@@ -629,12 +629,8 @@ async function deploy(argsString: string, options = {}) {
     options = Object.fromEntries(
       Object.entries(options).filter(([_, v]) => v != null)
     );
-    debugger;
-    deployedContractInstance.value = await contractInstance.$deploy(
-      args,
-      options
-    );
-    return contractInstance;
+
+    await contractInstance.value.$deploy(args, options);
   } catch (err) {
     console.error(err);
     throw err;
@@ -643,13 +639,12 @@ async function deploy(argsString: string, options = {}) {
 
 async function callStatic(func: string, argsString: string, gas: number) {
   console.log(`calling static func ${func} with args ${argsString}`);
-  const args = argsString.split(",").map((arg) => {
-    return arg.trim();
-  });
+  const args = argsStringToArgs(argsString);
 
   const options = { callStatic: true, gas };
   try {
-    return await deployedContractInstance.value?.$call(func, args, options);
+    debugger;
+    return await contractInstance.value?.$call(func, args, options);
   } catch (err) {
     console.error(err);
     throw err;
@@ -670,7 +665,7 @@ async function callContract(func: string, argsString: string) {
     options
   );
   try {
-    return await deployedContractInstance.value?.$call(func, args, options);
+    return await contractInstance.value?.$call(func, args, options);
   } catch (err) {
     console.error(err);
     throw err;
@@ -683,7 +678,7 @@ function resetData() {
   callRes.value = "";
   deployError.value = "";
   callStaticError.value = "";
-  deployedContractInstance.value = undefined;
+  contractInstance.value = undefined;
   deployInfo.value = "";
   minedData.value = false;
   miningStatus.value = false;
@@ -707,12 +702,12 @@ function onDeploy() {
   miningStatus.value = true;
 
   deploy(deployArgs.value, deployOpts.value) // this waits until the TX is mined
-    .then((data) => {
-      contractAddress.value = deployedContractInstance.value?.$options.address;
+    .then(() => {
+      debugger;
+      contractAddress.value = contractInstance.value?.$options.address;
       saveContract();
       deployInfo.value = `Deployed, and mined at this address: ${contractAddress.value}`;
       miningStatus.value = false;
-      deployedContractInstance.value = data;
       deployError.value = "";
     })
     .catch((err) => {
@@ -864,7 +859,7 @@ function atAddress() {
     .then((data: any) => {
       deployInfo.value = `Instantiated Contract at address: ${contractAddress.value}`;
       miningStatus.value = false;
-      deployedContractInstance.value = data;
+      contractInstance.value = data;
       deployError.value = "";
     })
     .catch((err: any) => {
