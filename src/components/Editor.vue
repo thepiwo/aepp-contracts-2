@@ -520,14 +520,44 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, Ref, ref, shallowRef, UnwrapRef } from "vue";
+import {
+  onMounted,
+  Ref,
+  ref,
+  shallowReactive,
+  shallowRef,
+  UnwrapRef,
+} from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
-import { generateKeyPair, getAddressFromPriv } from "@aeternity/aepp-sdk";
+import {
+  Contract,
+  generateKeyPair,
+  getAddressFromPriv,
+} from "@aeternity/aepp-sdk";
 import { EditorView } from "codemirror";
 import { useStore } from "vuex";
 import BigNumber from "bignumber.js";
+
+// @ts-ignore:  Property 'toJSON' does not exist on type 'BigInt'.
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
+
+Uint8Array.prototype.toString = function () {
+  return Buffer.from(this).toString("hex");
+};
+
+// @ts-ignore:  Property 'toJSON' does not exist on type 'Uint8Array'.
+Uint8Array.prototype.toJSON = function () {
+  return this.toString();
+};
+
+// @ts-ignore:  Property 'toJSON' does not exist on type 'Map'.
+Map.prototype.toJSON = function () {
+  return Object.fromEntries(this);
+};
 
 const store = useStore();
 
@@ -553,7 +583,8 @@ const byteCode: Ref<UnwrapRef<string | undefined>> = ref("");
 const nodeUrl: Ref<UnwrapRef<string | undefined>> = ref(
   "https://testnet.aeternity.io"
 );
-const contractInstance: Ref<any | undefined> = ref();
+
+let contractInstance: Contract<any> | undefined = undefined;
 const deployInfo = ref("");
 const minedData = ref(false);
 const miningStatus = ref(false);
@@ -620,17 +651,16 @@ async function deploy(argsString: string, options = {}) {
 
   console.log(`Deploying contract...`);
   try {
-    contractInstance.value = await store.getters[
-      "aeSdk/aeSdk"
-    ].initializeContract({
+    contractInstance = await store.getters["aeSdk/aeSdk"].initializeContract({
       sourceCode: contractCode.value,
     });
+
     // eslint-disable-next-line no-unused-vars
     options = Object.fromEntries(
       Object.entries(options).filter(([_, v]) => v != null)
     );
 
-    await contractInstance.value.$deploy(args, options);
+    return contractInstance.$deploy(args, options);
   } catch (err) {
     console.error(err);
     throw err;
@@ -643,8 +673,7 @@ async function callStatic(func: string, argsString: string, gas: number) {
 
   const options = { callStatic: true, gas };
   try {
-    debugger;
-    return await contractInstance.value?.$call(func, args, options);
+    return await contractInstance?.$call(func, args, options);
   } catch (err) {
     console.error(err);
     throw err;
@@ -665,7 +694,7 @@ async function callContract(func: string, argsString: string) {
     options
   );
   try {
-    return await contractInstance.value?.$call(func, args, options);
+    return await contractInstance?.$call(func, args, options);
   } catch (err) {
     console.error(err);
     throw err;
@@ -678,7 +707,7 @@ function resetData() {
   callRes.value = "";
   deployError.value = "";
   callStaticError.value = "";
-  contractInstance.value = undefined;
+  contractInstance = undefined;
   deployInfo.value = "";
   minedData.value = false;
   miningStatus.value = false;
@@ -702,9 +731,8 @@ function onDeploy() {
   miningStatus.value = true;
 
   deploy(deployArgs.value, deployOpts.value) // this waits until the TX is mined
-    .then(() => {
-      debugger;
-      contractAddress.value = contractInstance.value?.$options.address;
+    .then((deployed) => {
+      contractAddress.value = deployed.result.contractId;
       saveContract();
       deployInfo.value = `Deployed, and mined at this address: ${contractAddress.value}`;
       miningStatus.value = false;
@@ -859,7 +887,7 @@ function atAddress() {
     .then((data: any) => {
       deployInfo.value = `Instantiated Contract at address: ${contractAddress.value}`;
       miningStatus.value = false;
-      contractInstance.value = data;
+      contractInstance = data;
       deployError.value = "";
     })
     .catch((err: any) => {

@@ -39,7 +39,7 @@ export default (store: Store<State>) => {
             (node) => node.nodeNetworkId === networkId
           );
           aeSdk?.selectNode(name);
-          dispatch("updateConnectionInfo");
+          await dispatch("updateConnectionInfo");
         }
       },
       onAddressChange: () => dispatch("updateConnectionInfo"),
