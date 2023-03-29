@@ -520,14 +520,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  onMounted,
-  Ref,
-  ref,
-  shallowReactive,
-  shallowRef,
-  UnwrapRef,
-} from "vue";
+import { onMounted, Ref, ref, shallowRef, UnwrapRef } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
@@ -577,7 +570,7 @@ contract Example =
 const modifySettings = ref(false);
 const contractCode: Ref<UnwrapRef<string>> = ref(example);
 const aci: Ref<UnwrapRef<string | undefined>> = ref();
-const publicKey: Ref<UnwrapRef<string | undefined>> = ref();
+const publicKey: Ref<string | undefined> = ref(); // TODO remove UnwrapRef for all, check if ref undefined is needed
 const secretKey: Ref<UnwrapRef<string | undefined>> = ref();
 const byteCode: Ref<UnwrapRef<string | undefined>> = ref("");
 const nodeUrl: Ref<UnwrapRef<string | undefined>> = ref(
@@ -585,10 +578,12 @@ const nodeUrl: Ref<UnwrapRef<string | undefined>> = ref(
 );
 
 let contractInstance: Contract<any> | undefined = undefined;
+
 const deployInfo = ref("");
 const minedData = ref(false);
 const miningStatus = ref(false);
 
+// TODO consider grouping together properties as object with reactive
 const deployFunc = ref("init");
 const deployArgs = ref("");
 const staticFunc = ref("example");
@@ -660,7 +655,7 @@ async function deploy(argsString: string, options = {}) {
       Object.entries(options).filter(([_, v]) => v != null)
     );
 
-    return contractInstance.$deploy(args, options);
+    return contractInstance?.$deploy(args, options);
   } catch (err) {
     console.error(err);
     throw err;
