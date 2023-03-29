@@ -1,7 +1,15 @@
-<script setup lang="ts">
-import Editor from "./components/Editor.vue";
-</script>
-
 <template>
   <Editor />
 </template>
+
+<script setup lang="ts">
+import Editor from "./components/Editor.vue";
+
+import { useSdkStore } from "./utils/sdkStore";
+import { onMounted } from "vue";
+
+const sdkStore = useSdkStore();
+const { initSdk } = sdkStore;
+
+onMounted(() => initSdk());
+</script>
