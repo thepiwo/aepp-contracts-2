@@ -79,8 +79,8 @@ import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { storeToRefs } from "pinia";
-import { useContractStore } from "../utils/contractStore";
-import { useSdkStore } from "../utils/sdkStore";
+import { useContractStore } from "../stores/contractStore";
+import { useSdkStore } from "../stores/sdkStore";
 
 const extensions = [javascript(), oneDark];
 

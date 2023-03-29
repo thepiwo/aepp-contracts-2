@@ -133,7 +133,7 @@
 </template>
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { useContractStore } from "../utils/contractStore";
+import { useContractStore } from "../stores/contractStore";
 import { ref } from "vue";
 
 const contractStore = useContractStore();
@@ -148,5 +148,5 @@ const {
 } = storeToRefs(contractStore);
 const { callContract } = contractStore;
 
-const callError = ref(false);
+const callError = ref("");
 </script>

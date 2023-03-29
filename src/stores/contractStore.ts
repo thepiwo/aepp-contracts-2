@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { Contract } from "@aeternity/aepp-sdk";
 import { computed, Ref, ref } from "vue";
 import { useSdkStore } from "./sdkStore";
-import { argsStringToArgs } from "./utils";
+import { argsStringToArgs } from "../utils/utils";
 import "../utils/toJsonExtensions";
 
 const example = `@compiler >= 4

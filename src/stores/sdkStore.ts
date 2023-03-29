@@ -9,7 +9,7 @@ import {
   SUBSCRIPTION_TYPES,
   walletDetector,
 } from "@aeternity/aepp-sdk";
-import { COMPILER_URL, nodes } from "./config";
+import { COMPILER_URL, nodes } from "../utils/config";
 import { computed, Ref, ref, UnwrapRef } from "vue";
 import BigNumber from "bignumber.js";
 

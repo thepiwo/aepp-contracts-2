@@ -77,7 +77,7 @@
 </template>
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { useSdkStore } from "../utils/sdkStore";
+import { useSdkStore } from "../stores/sdkStore";
 import { ref } from "vue";
 
 const sdkStore = useSdkStore();

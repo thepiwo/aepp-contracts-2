@@ -136,7 +136,7 @@
 </template>
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
-import { useContractStore } from "../utils/contractStore";
+import { useContractStore } from "../stores/contractStore";
 
 const contractStore = useContractStore();
 const {
