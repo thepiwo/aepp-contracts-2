@@ -15,8 +15,8 @@
         <span v-if="isStatic">Modify Local Account</span>
         <span v-if="!isStatic">Use Local Account</span>
       </button>
-      <h6 class="mt-4 text-sm text-purple" v-if="!modifySettings && account">
-        <span class="font-mono text-black">Account: </span> {{ account }}
+      <h6 class="mt-4 text-sm text-purple" v-if="!modifySettings && address">
+        <span class="font-mono text-black">Account: </span> {{ address }}
       </h6>
     </div>
 
@@ -114,7 +114,6 @@
               :indent-with-tab="true"
               :tab-size="2"
               :extensions="extensions"
-              @ready="handleReady"
               style="height: 300px"
             />
           </div>
@@ -125,7 +124,6 @@
               :indent-with-tab="true"
               :tab-size="2"
               :extensions="extensions"
-              @ready="handleReady"
               style="height: 300px"
             />
           </div>
@@ -520,7 +518,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, Ref, ref, shallowRef, UnwrapRef } from "vue";
+import { onMounted, Ref, ref, UnwrapRef } from "vue";
 import { Codemirror } from "vue-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
@@ -529,9 +527,9 @@ import {
   generateKeyPair,
   getAddressFromPriv,
 } from "@aeternity/aepp-sdk";
-import { EditorView } from "codemirror";
-import { useStore } from "vuex";
 import BigNumber from "bignumber.js";
+import { useGlobalStore } from "../utils/store";
+import { storeToRefs } from "pinia";
 
 // @ts-ignore:  Property 'toJSON' does not exist on type 'BigInt'.
 BigInt.prototype.toJSON = function () {
@@ -552,15 +550,10 @@ Map.prototype.toJSON = function () {
   return Object.fromEntries(this);
 };
 
-const store = useStore();
+const store = useGlobalStore();
+const { status, address, networkId } = storeToRefs(store);
 
 const extensions = [javascript(), oneDark];
-
-// Codemirror EditorView instance ref
-const view = shallowRef();
-const handleReady = (payload: { view: EditorView }) => {
-  view.value = payload.view;
-};
 
 const example = `@compiler >= 4
 
@@ -622,7 +615,7 @@ async function compile(
 ): Promise<{ bytecode: string; aci: object } | undefined> {
   console.log(`Compiling contract...`);
   try {
-    return store.getters["aeSdk/aeSdk"].compilerApi.compileBySourceCode(code);
+    return store.aeSdk?.compilerApi.compileBySourceCode(code);
   } catch (err: any) {
     return Promise.reject(
       (compileError.value =
@@ -646,7 +639,7 @@ async function deploy(argsString: string, options = {}) {
 
   console.log(`Deploying contract...`);
   try {
-    contractInstance = await store.getters["aeSdk/aeSdk"].initializeContract({
+    contractInstance = await store.aeSdk?.initializeContract({
       sourceCode: contractCode.value,
     });
 
@@ -779,14 +772,11 @@ function onCallDataAndFunction() {
 }
 
 async function getClient() {
-  await store.dispatch(
-    "aeSdk/initSdk",
-    isStatic.value ? secretKey.value : undefined
-  );
+  await store.initSdk(isStatic.value ? secretKey.value : undefined);
 
   isConnected.value = true;
-  nodeUrl.value = store.state.aeSdk.networkId
-    ? store.getters["aeSdk/aeSdk"].api.$host || nodeUrl.value
+  nodeUrl.value = networkId.value
+    ? store.aeSdk?.api.$host || nodeUrl.value
     : nodeUrl.value;
 
   isStatic.value = true;
@@ -801,19 +791,16 @@ function getSecretKey() {
 }
 
 async function fundAccountIfNeeded() {
-  const address = store.state.aeSdk.address;
-  const networkId = store.state.aeSdk.networkId;
-
-  const balance = address
-    ? await store.getters["aeSdk/aeSdk"].getBalance(address)
+  const balance = address.value
+    ? (await store.aeSdk?.getBalance(address.value)) || 0
     : 0;
 
   if (
-    networkId === "ae_uat" &&
-    address &&
+    networkId.value === "ae_uat" &&
+    address.value &&
     new BigNumber(10000000000000000).gt(balance)
   ) {
-    await fetch(`https://faucet.aepps.com/account/${address}`, {
+    await fetch(`https://faucet.aepps.com/account/${address.value}`, {
       method: "POST",
     }).catch(console.error);
   }
@@ -874,8 +861,8 @@ function atAddress() {
     ? { aci: JSON.parse(aci.value) }
     : { source: contractCode.value };
 
-  store.getters["aeSdk/aeSdk"]
-    .initializeContract({
+  store.aeSdk
+    ?.initializeContract({
       ...opts,
       address: `ct_${contractAddress.value?.replace("ct_", "")}`,
     })
@@ -901,9 +888,7 @@ function resetContract() {
 
 async function initExtension() {
   isConnected.value = true;
-  nodeUrl.value = store.state.aeSdk.networkId
-    ? store.getters["aeSdk/aeSdk"].api.$host
-    : undefined;
+  nodeUrl.value = networkId.value ? store.aeSdk?.api.$host : undefined;
 
   isStatic.value = false;
   await getClient();
