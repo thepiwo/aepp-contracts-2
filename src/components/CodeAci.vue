@@ -53,6 +53,7 @@
         <button
           v-if="isConnected"
           class="mt-2 rounded-full bg-black hover:bg-purple-500 text-white p-2 px-4"
+          @click="resetContractState"
         >
           Reset
         </button>
@@ -87,7 +88,11 @@ const extensions = [javascript(), oneDark];
 const contractStore = useContractStore();
 const { contractCode, aci, contractAddress, compileError } =
   storeToRefs(contractStore);
-const { compileContractFromSource, initializeContractFromAci } = contractStore;
+const {
+  compileContractFromSource,
+  initializeContractFromAci,
+  resetContractState,
+} = contractStore;
 
 const sdkStore = useSdkStore();
 const { isConnected } = storeToRefs(sdkStore);

@@ -12,6 +12,7 @@ import {
 import { COMPILER_URL, nodes } from "../utils/config";
 import { computed, Ref, ref, UnwrapRef } from "vue";
 import BigNumber from "bignumber.js";
+import { getSecretKey, persistSecretKey } from "../utils/utils";
 
 interface Wallet {
   info: {
@@ -121,7 +122,7 @@ export const useSdkStore = defineStore("sdk", () => {
 
   async function initSdk(initStatic: boolean = true) {
     if (initStatic) {
-      secretKey.value = getSecretKey();
+      secretKey.value = getOrGenerateSecretKey();
 
       if (secretKey.value) initAeSdk(secretKey.value);
     } else await initAeSdkAepp();
@@ -143,10 +144,8 @@ export const useSdkStore = defineStore("sdk", () => {
     isConnected.value = true;
   }
 
-  function getSecretKey() {
-    return (
-      window.localStorage.getItem("secret-key") || generateKeyPair().secretKey
-    );
+  function getOrGenerateSecretKey() {
+    return getSecretKey() || generateKeyPair().secretKey;
   }
 
   async function fundAccountIfNeeded() {
@@ -163,8 +162,7 @@ export const useSdkStore = defineStore("sdk", () => {
         method: "POST",
       }).catch(console.error);
 
-      if (isStatic.value && secretKey.value)
-        window.localStorage.setItem("secret-key", secretKey.value);
+      if (isStatic.value && secretKey.value) persistSecretKey(secretKey.value);
     }
   }
 

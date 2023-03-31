@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="deployResult.final"
-    class="w-1/2 p-4 bg-gray-200 rounded-sm shadow"
+    class="w-1/2 ml-8 p-4 bg-gray-200 rounded-sm shadow"
   >
     <h2 class="py-2">⬅ Call Static Function</h2>
     <div class="flex -mx-2 mt-4 mb-4">

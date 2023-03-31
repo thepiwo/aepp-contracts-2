@@ -2,53 +2,18 @@ import { defineStore } from "pinia";
 import { Contract } from "@aeternity/aepp-sdk";
 import { computed, Ref, ref } from "vue";
 import { useSdkStore } from "./sdkStore";
-import { argsStringToArgs } from "../utils/utils";
+import {
+  argsStringToArgs,
+  defaultCallOptions,
+  exampleContractCode,
+  getContract,
+  persistContract,
+  Result,
+} from "../utils/utils";
 import "../utils/toJsonExtensions";
 
-const example = `@compiler >= 4
-
-contract Example =
-  entrypoint example(x : int) = x`;
-
-const defaultCallOptions = {
-  gasPrice: 1000000000,
-  amount: 0,
-  fee: null, // sdk will automatically select this
-  gas: null, // sdk will automatically select this
-  callData: "",
-};
-
-class Result {
-  error?: string;
-  info?: string;
-  final: boolean = false;
-
-  setError(error: string) {
-    this.error = error;
-    this.info = undefined;
-    this.final = false;
-  }
-  setInfo(info: string) {
-    this.info = info;
-    this.error = undefined;
-    this.final = false;
-  }
-
-  setFinal(info: string) {
-    this.info = info;
-    this.error = undefined;
-    this.final = true;
-  }
-
-  reset() {
-    this.info = undefined;
-    this.error = undefined;
-    this.final = false;
-  }
-}
-
 export const useContractStore = defineStore("contract", () => {
-  const contractCode: Ref<string> = ref(example);
+  const contractCode: Ref<string> = ref(structuredClone(exampleContractCode));
   const aci: Ref<string> = ref("");
   const byteCode: Ref<string | undefined> = ref();
 
@@ -67,7 +32,7 @@ export const useContractStore = defineStore("contract", () => {
   const callArgs = ref("");
   const callRes = ref("");
   const callWaiting = ref(false);
-  const callOptions = ref(defaultCallOptions);
+  const callOptions = ref(structuredClone(defaultCallOptions));
 
   const compileError = ref(null);
   const contractAddress: Ref<string | undefined> = ref();
@@ -86,6 +51,7 @@ export const useContractStore = defineStore("contract", () => {
       .then((result) => {
         byteCode.value = result.bytecode;
         aci.value = JSON.stringify(result?.aci, null, 2);
+        persistContract(contractCode.value, aci.value, contractAddress.value);
       });
   }
 
@@ -107,6 +73,7 @@ export const useContractStore = defineStore("contract", () => {
         deployResult.value.setFinal(
           `Instantiated Contract at address: ${contractAddress.value}`
         );
+        persistContract(contractCode.value, aci.value, contractAddress.value);
       })
       .catch((error) => {
         if (error instanceof Error) deployResult.value.setError(error.message);
@@ -133,6 +100,7 @@ export const useContractStore = defineStore("contract", () => {
         deployResult.value.setFinal(
           `Deployed, and mined at this address: ${contractAddress.value}`
         );
+        persistContract(contractCode.value, aci.value, contractAddress.value);
       })
       .catch((error) => {
         if (error instanceof Error) deployResult.value.setError(error.message);
@@ -166,11 +134,47 @@ export const useContractStore = defineStore("contract", () => {
     });
   }
 
+  async function initContractState() {
+    const persistedContract = getContract();
+    contractCode.value =
+      persistedContract.contractCode || structuredClone(exampleContractCode);
+    aci.value = persistedContract.aci || "";
+    contractAddress.value = persistedContract.contractAddress || "";
+    if (aci.value && contractAddress.value) await initializeContractFromAci();
+  }
+
+  async function resetContractState() {
+    contractInstance = undefined;
+    contractCode.value = structuredClone(exampleContractCode);
+    aci.value = "";
+    contractAddress.value = undefined;
+    byteCode.value = undefined;
+    deployData.value = {
+      args: "",
+      options: structuredClone(defaultCallOptions),
+    };
+    deployResult.value = new Result();
+    staticFunc.value = "example";
+    staticGas.value = 1000000;
+    staticArgs.value = "";
+    staticRes.value = "";
+    callFunc.value = "";
+    callArgs.value = "";
+    callRes.value = "";
+    callWaiting.value = false;
+    callOptions.value = structuredClone(defaultCallOptions);
+    compileError.value = null;
+
+    await persistContract(contractCode.value, aci.value, contractAddress.value);
+  }
+
   return {
     contractCode,
     aci,
     byteCode,
     contractAddress,
+    initContractState,
+    resetContractState,
 
     deployData,
     deployResult,
