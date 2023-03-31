@@ -8,7 +8,7 @@
       <div class="mx-2 w-2/3">
         <label class="text-xs block mb-1" for="staticFunc">Function</label>
         <input
-          v-model="staticFunc"
+          v-model="callStaticData.func"
           class="w-full p-2"
           id="staticFunc"
           type="text"
@@ -18,7 +18,7 @@
       <div class="mx-2 w-1/3">
         <label class="text-xs block mb-1" for="staticGas">Gas Limit</label>
         <input
-          v-model.number="staticGas"
+          v-model.number="callStaticData.gas"
           class="w-full p-2"
           id="staticGas"
           type="number"
@@ -31,7 +31,7 @@
       <div class="mx-2 w-full">
         <label class="text-xs block mb-1" for="staticArgs">Arguments</label>
         <input
-          v-model="staticArgs"
+          v-model="callStaticData.args"
           class="w-full p-2"
           id="staticArgs"
           type="text"
@@ -40,18 +40,19 @@
       </div>
     </div>
 
-    <div class="mt-2 mb-2" v-if="staticRes && !callStaticError">
-      <label class="text-xs block mb-1">Call Result</label>
+    <div class="mt-2 mb-2">
+      <label class="text-xs block mb-1">{{ callStaticResult.info }}</label>
       <div
         class="w-full text-white bg-black text-xs mb-4 p-4 overflow-x-scroll font-mono"
+        v-if="callStaticResult.final"
       >
-        {{ staticRes }}
+        {{ callStaticResult.data }}
       </div>
     </div>
-    <div class="mt-2 mb-2" v-if="callStaticError">
+    <div class="mt-2 mb-2" v-if="callStaticResult.error">
       <label class="text-xs block mb-1 text-red">Errors</label>
       <textarea
-        v-model="callStaticError"
+        v-model="callStaticResult.error"
         class="h-16 w-full text-red-500 bg-black text-xs mb-4 p-4 font-mono"
       ></textarea>
     </div>
@@ -67,12 +68,9 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 import { useContractStore } from "../stores/contractStore";
-import { ref } from "vue";
 
 const contractStore = useContractStore();
-const { deployResult, staticFunc, staticGas, staticArgs, staticRes } =
+const { deployResult, callStaticData, callStaticResult } =
   storeToRefs(contractStore);
 const { callContractStatic } = contractStore;
-
-const callStaticError = ref("");
 </script>

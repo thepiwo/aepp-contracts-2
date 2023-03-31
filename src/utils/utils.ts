@@ -23,28 +23,33 @@ export class Result {
   error?: string;
   info?: string;
   final: boolean = false;
+  data?: string;
 
   setError(error: string) {
     this.error = error;
     this.info = undefined;
     this.final = false;
+    this.data = undefined;
   }
   setInfo(info: string) {
     this.info = info;
     this.error = undefined;
     this.final = false;
+    this.data = undefined;
   }
 
-  setFinal(info: string) {
+  setFinal(info: string, data?: string) {
     this.info = info;
     this.error = undefined;
     this.final = true;
+    this.data = data;
   }
 
   reset() {
     this.info = undefined;
     this.error = undefined;
     this.final = false;
+    this.data = undefined;
   }
 }
 

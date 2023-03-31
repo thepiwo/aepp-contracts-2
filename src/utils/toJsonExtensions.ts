@@ -1,6 +1,8 @@
 // @ts-ignore:  Property 'toJSON' does not exist on type 'BigInt'.
+import BigNumber from "bignumber.js";
+
 BigInt.prototype.toJSON = function () {
-  return this.toString();
+  return BigNumber(this.toString()).toNumber();
 };
 
 Uint8Array.prototype.toString = function () {

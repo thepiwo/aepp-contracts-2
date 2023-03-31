@@ -17,16 +17,27 @@ export const useContractStore = defineStore("contract", () => {
   const aci: Ref<string> = ref("");
   const byteCode: Ref<string | undefined> = ref();
 
-  const deployData = ref({
+  const deployData: Ref<{
+    args: string;
+    options: {
+      amount: number;
+      callData: string;
+      fee: null;
+      gas: null;
+      gasPrice: number;
+    };
+  }> = ref({
     args: "",
     options: structuredClone(defaultCallOptions),
   });
   const deployResult: Ref<Result> = ref(new Result());
 
-  const staticFunc = ref("example");
-  const staticGas = ref(1000000);
-  const staticArgs = ref("");
-  const staticRes = ref("");
+  const callStaticData: Ref<{ args: string; func: string; gas: number }> = ref({
+    func: "example",
+    gas: 1000000,
+    args: "",
+  });
+  const callStaticResult: Ref<Result> = ref(new Result());
 
   const callFunc = ref("");
   const callArgs = ref("");
@@ -56,6 +67,7 @@ export const useContractStore = defineStore("contract", () => {
   }
 
   async function initializeContractFromAci() {
+    resetDeployAndCallData();
     byteCode.value = "calling at address doesn't need bytecode";
     deployResult.value.setInfo("Instantiating Contract at address ...");
 
@@ -82,9 +94,10 @@ export const useContractStore = defineStore("contract", () => {
   }
 
   async function deployContract() {
+    resetDeployAndCallData();
+    deployResult.value.setInfo("Deploying Contract ...");
     const args = argsStringToArgs(deployData.value.args);
 
-    deployResult.value.setInfo("Deploying Contract ...");
     contractInstance = await sdkStore.aeSdk?.initializeContract({
       sourceCode: contractCode.value,
     });
@@ -108,13 +121,23 @@ export const useContractStore = defineStore("contract", () => {
   }
 
   async function callContractStatic() {
-    const args = argsStringToArgs(staticArgs.value);
+    callStaticResult.value.setInfo("Dry-Running ...");
+    const args = argsStringToArgs(callStaticData.value.args);
+    const options = { callStatic: true, gas: callStaticData.value.gas };
 
-    const options = { callStatic: true, gas: staticGas.value };
-
-    contractInstance?.$call(staticFunc.value, args, options).then((result) => {
-      staticRes.value = `Result: ` + JSON.stringify(result?.decodedResult);
-    });
+    contractInstance
+      ?.$call(callStaticData.value.func, args, options)
+      .then((result) => {
+        callStaticResult.value.setFinal(
+          // @ts-ignore
+          `Dry-Run Gas Estimate: ${result?.result?.gasUsed}, Fee Estimate: ${result?.tx.fee} aetto`,
+          JSON.stringify(result?.decodedResult)
+        );
+      })
+      .catch((error) => {
+        if (error instanceof Error)
+          callStaticResult.value.setError(error.message);
+      });
   }
 
   async function callContract() {
@@ -143,28 +166,37 @@ export const useContractStore = defineStore("contract", () => {
     if (aci.value && contractAddress.value) await initializeContractFromAci();
   }
 
-  async function resetContractState() {
-    contractInstance = undefined;
-    contractCode.value = structuredClone(exampleContractCode);
-    aci.value = "";
-    contractAddress.value = undefined;
+  function resetDeployAndCallData() {
     byteCode.value = undefined;
     deployData.value = {
       args: "",
       options: structuredClone(defaultCallOptions),
     };
     deployResult.value = new Result();
-    staticFunc.value = "example";
-    staticGas.value = 1000000;
-    staticArgs.value = "";
-    staticRes.value = "";
+
+    callStaticData.value = {
+      func: "example",
+      gas: 1000000,
+      args: "",
+    };
+    callStaticResult.value = new Result();
+
     callFunc.value = "";
     callArgs.value = "";
     callRes.value = "";
     callWaiting.value = false;
     callOptions.value = structuredClone(defaultCallOptions);
+  }
+
+  async function resetContractState() {
+    contractInstance = undefined;
+    contractCode.value = structuredClone(exampleContractCode);
+    aci.value = "";
+    contractAddress.value = undefined;
+
     compileError.value = null;
 
+    resetDeployAndCallData();
     await persistContract(contractCode.value, aci.value, contractAddress.value);
   }
 
@@ -186,10 +218,8 @@ export const useContractStore = defineStore("contract", () => {
 
     initializeContractFromAci,
 
-    staticFunc,
-    staticGas,
-    staticArgs,
-    staticRes,
+    callStaticData,
+    callStaticResult,
     callContractStatic,
 
     callFunc,
