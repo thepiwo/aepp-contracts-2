@@ -9,10 +9,28 @@
     "resolveJsonModule": true,
     "isolatedModules": false,
     "esModuleInterop": true,
-    "lib": ["ESNext", "DOM", "es6"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "es6"
+    ],
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules/@aeternity/aepp-sdk/src/typings"
+    ],
+    "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
 }
