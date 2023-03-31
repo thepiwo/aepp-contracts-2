@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="byteCode && contractAddress"
+    v-if="deployResult.final"
     class="w-full p-4 bg-gray-200 rounded-sm shadow mb-8"
   >
     <h2 class="py-2">⬆ Call Function</h2>
@@ -137,15 +137,8 @@ import { useContractStore } from "../stores/contractStore";
 import { ref } from "vue";
 
 const contractStore = useContractStore();
-const {
-  contractAddress,
-  byteCode,
-  callFunc,
-  callOptions,
-  callArgs,
-  callRes,
-  callWaiting,
-} = storeToRefs(contractStore);
+const { deployResult, callFunc, callOptions, callArgs, callRes, callWaiting } =
+  storeToRefs(contractStore);
 const { callContract } = contractStore;
 
 const callError = ref("");

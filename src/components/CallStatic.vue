@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="byteCode && contractAddress"
+    v-if="deployResult.final"
     class="w-1/2 p-4 bg-gray-200 rounded-sm shadow"
   >
     <h2 class="py-2">⬅ Call Static Function</h2>
@@ -70,14 +70,8 @@ import { useContractStore } from "../stores/contractStore";
 import { ref } from "vue";
 
 const contractStore = useContractStore();
-const {
-  contractAddress,
-  byteCode,
-  staticFunc,
-  staticGas,
-  staticArgs,
-  staticRes,
-} = storeToRefs(contractStore);
+const { deployResult, staticFunc, staticGas, staticArgs, staticRes } =
+  storeToRefs(contractStore);
 const { callContractStatic } = contractStore;
 
 const callStaticError = ref("");

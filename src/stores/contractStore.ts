@@ -18,16 +18,45 @@ const defaultCallOptions = {
   callData: "",
 };
 
+class Result {
+  error?: string;
+  info?: string;
+  final: boolean = false;
+
+  setError(error: string) {
+    this.error = error;
+    this.info = undefined;
+    this.final = false;
+  }
+  setInfo(info: string) {
+    this.info = info;
+    this.error = undefined;
+    this.final = false;
+  }
+
+  setFinal(info: string) {
+    this.info = info;
+    this.error = undefined;
+    this.final = true;
+  }
+
+  reset() {
+    this.info = undefined;
+    this.error = undefined;
+    this.final = false;
+  }
+}
+
 export const useContractStore = defineStore("contract", () => {
   const contractCode: Ref<string> = ref(example);
   const aci: Ref<string> = ref("");
-  const byteCode: Ref<string> = ref("");
+  const byteCode: Ref<string | undefined> = ref();
 
-  const deployFunc = ref("init");
-  const deployArgs = ref("");
-  const deployError = ref(null);
-  const deployOptions = ref(defaultCallOptions);
-  const deployInfo = ref("");
+  const deployData = ref({
+    args: "",
+    options: structuredClone(defaultCallOptions),
+  });
+  const deployResult: Ref<Result> = ref(new Result());
 
   const staticFunc = ref("example");
   const staticGas = ref(1000000);
@@ -49,6 +78,9 @@ export const useContractStore = defineStore("contract", () => {
   const sdkStore = useSdkStore();
 
   async function compileContractFromSource() {
+    byteCode.value = undefined;
+    deployResult.value.reset();
+
     await sdkStore.aeSdk?.compilerApi
       .compileBySourceCode(contractCode.value)
       .then((result) => {
@@ -59,34 +91,52 @@ export const useContractStore = defineStore("contract", () => {
 
   async function initializeContractFromAci() {
     byteCode.value = "calling at address doesn't need bytecode";
-    deployInfo.value = "Instantiating Contract at address ...";
+    deployResult.value.setInfo("Instantiating Contract at address ...");
 
     const opts: { aci: any } | { source: string } = aci.value
       ? { aci: JSON.parse(aci.value) }
       : { source: contractCode.value };
 
-    contractInstance = await sdkStore.aeSdk?.initializeContract({
-      ...opts,
-      address: `ct_${contractAddress.value?.replace("ct_", "")}`,
-    });
+    await sdkStore.aeSdk
+      ?.initializeContract({
+        ...opts,
+        address: `ct_${contractAddress.value?.replace("ct_", "")}`,
+      })
+      .then((instance) => {
+        contractInstance = instance;
+        deployResult.value.setFinal(
+          `Instantiated Contract at address: ${contractAddress.value}`
+        );
+      })
+      .catch((error) => {
+        if (error instanceof Error) deployResult.value.setError(error.message);
+        return undefined;
+      });
   }
 
   async function deployContract() {
-    const args = argsStringToArgs(deployArgs.value);
+    const args = argsStringToArgs(deployData.value.args);
 
-    console.log(`Deploying contract...`);
+    deployResult.value.setInfo("Deploying Contract ...");
     contractInstance = await sdkStore.aeSdk?.initializeContract({
       sourceCode: contractCode.value,
     });
 
     const options = Object.fromEntries(
-      Object.entries(deployOptions.value).filter(([_, v]) => v != null)
+      Object.entries(deployData.value.options).filter(([_, v]) => v != null)
     );
 
-    contractInstance?.$deploy(args, options).then((deployed) => {
-      contractAddress.value = deployed?.result?.contractId;
-      deployInfo.value = `Deployed, and mined at this address: ${contractAddress.value}`;
-    });
+    contractInstance
+      ?.$deploy(args, options)
+      .then((deployed) => {
+        contractAddress.value = deployed?.result?.contractId;
+        deployResult.value.setFinal(
+          `Deployed, and mined at this address: ${contractAddress.value}`
+        );
+      })
+      .catch((error) => {
+        if (error instanceof Error) deployResult.value.setError(error.message);
+      });
   }
 
   async function callContractStatic() {
@@ -120,13 +170,10 @@ export const useContractStore = defineStore("contract", () => {
     contractCode,
     aci,
     byteCode,
-
-    deployFunc,
-    deployArgs,
-    deployError,
     contractAddress,
-    deployOptions,
-    deployInfo,
+
+    deployData,
+    deployResult,
     deployContract,
 
     compileError,
