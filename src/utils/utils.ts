@@ -44,13 +44,6 @@ export class Result {
     this.final = true;
     this.data = data;
   }
-
-  reset() {
-    this.info = undefined;
-    this.error = undefined;
-    this.final = false;
-    this.data = undefined;
-  }
 }
 
 export function persistSecretKey(secretKey: string) {

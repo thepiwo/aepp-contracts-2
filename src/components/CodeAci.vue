@@ -67,7 +67,7 @@
         <button
           v-if="isConnected"
           class="mt-2 mr-2 rounded-r-full bg-black hover:bg-purple-500 text-white p-2 px-4"
-          @click="initializeContractFromAci"
+          @click="initializeContractFromAci(contractAddress)"
         >
           at Address
         </button>
@@ -82,12 +82,12 @@ import { javascript } from "@codemirror/lang-javascript";
 import { storeToRefs } from "pinia";
 import { useContractStore } from "../stores/contractStore";
 import { useSdkStore } from "../stores/sdkStore";
+import { ref } from "vue";
 
 const extensions = [javascript(), oneDark];
 
 const contractStore = useContractStore();
-const { contractCode, aci, contractAddress, compileError } =
-  storeToRefs(contractStore);
+const { contractCode, aci, compileError } = storeToRefs(contractStore);
 const {
   compileContractFromSource,
   initializeContractFromAci,
@@ -96,4 +96,6 @@ const {
 
 const sdkStore = useSdkStore();
 const { isConnected } = storeToRefs(sdkStore);
+
+const contractAddress = ref("");
 </script>

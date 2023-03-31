@@ -17,7 +17,7 @@
           ></label
         >
         <input
-          v-model.number="callOptions.gasPrice"
+          v-model.number="callData.options.gasPrice"
           class="w-full p-2"
           id="cGasPrice"
           type="number"
@@ -37,7 +37,7 @@
           ></label
         >
         <input
-          v-model.number="callOptions.amount"
+          v-model.number="callData.options.amount"
           class="w-full p-2"
           id="cAmount"
           type="number"
@@ -57,7 +57,7 @@
           ></label
         >
         <input
-          v-model.number="callOptions.fee"
+          v-model.number="callData.options.fee"
           class="w-full p-2"
           id="cFee"
           type="number"
@@ -67,7 +67,7 @@
       <div class="mx-2 w-1/4">
         <label class="text-xs block mb-1" for="cGas">Gas Limit</label>
         <input
-          v-model.number="callOptions.gas"
+          v-model.number="callData.options.gas"
           class="w-full p-2"
           id="cGas"
           type="number"
@@ -77,7 +77,7 @@
       </div>
 
       <input
-        v-model="callOptions.callData"
+        v-model="callData.options.callData"
         class="mx-2 w-1/2 p-2"
         type="hidden"
       />
@@ -86,7 +86,7 @@
       <div class="mx-2 w-1/3">
         <label class="text-xs block mb-1" for="func">Function</label>
         <input
-          v-model="callFunc"
+          v-model="callData.func"
           class="w-full p-2"
           id="func"
           type="text"
@@ -96,7 +96,7 @@
       <div class="mx-2 w-2/3">
         <label class="text-xs block mb-1" for="args">Arguments</label>
         <input
-          v-model="callArgs"
+          v-model="callData.args"
           class="w-full p-2"
           id="args"
           type="text"
@@ -105,17 +105,19 @@
       </div>
     </div>
 
-    <div class="mt-2 mb-2" v-if="callRes && !callError">
-      <label class="text-xs block mb-1">Call Result</label>
+    <div class="mt-2 mb-2">
+      <label class="text-xs block mb-1">{{ callResult.info }}</label>
       <div
         class="w-full text-white bg-black text-xs mb-4 p-4 font-mono"
-        v-html="callRes"
-      ></div>
+        v-if="callResult.final"
+      >
+        {{ callResult.data }}
+      </div>
     </div>
-    <div class="mt-2 mb-2" v-if="callError">
+    <div class="mt-2 mb-2" v-if="callResult.error">
       <label class="text-xs block mb-1 text-red">Errors</label>
       <textarea
-        v-model="callError"
+        v-model="callResult.error"
         class="h-16 w-full text-red-500 bg-black text-xs mb-4 p-4 font-mono"
       ></textarea>
     </div>
@@ -126,20 +128,13 @@
     >
       Call Function
     </button>
-    <span v-if="callWaiting" class="text-sm text-red-500"
-      >Calling Function...</span
-    >
   </div>
 </template>
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 import { useContractStore } from "../stores/contractStore";
-import { ref } from "vue";
 
 const contractStore = useContractStore();
-const { deployResult, callFunc, callOptions, callArgs, callRes, callWaiting } =
-  storeToRefs(contractStore);
+const { deployResult, callData, callResult } = storeToRefs(contractStore);
 const { callContract } = contractStore;
-
-const callError = ref("");
 </script>
