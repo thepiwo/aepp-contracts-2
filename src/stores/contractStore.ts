@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { Contract } from "@aeternity/aepp-sdk";
+import { Contract, toAe } from "@aeternity/aepp-sdk";
 import { computed, Ref, ref } from "vue";
 import { useSdkStore } from "./sdkStore";
 import {
@@ -146,8 +146,13 @@ export const useContractStore = defineStore("contract", () => {
       ?.$call(callStaticData.value.func, args, options)
       .then((result) => {
         callStaticResult.value.setFinal(
-          // @ts-ignore
-          `Dry-Run Gas Estimate: ${result?.result?.gasUsed}, Fee Estimate: ${result?.tx?.fee} aetto`,
+          `Dry-Run Gas Estimate: ${
+            result?.result?.gasUsed
+            // @ts-ignore
+          }, Fee Estimate: ${toAe(result?.tx?.fee)} ae (${
+            // @ts-ignore
+            result?.tx?.fee
+          } aetto)`,
           JSON.stringify(result?.decodedResult)
         );
       })
@@ -167,10 +172,12 @@ export const useContractStore = defineStore("contract", () => {
     contractInstance
       ?.$call(callData.value.func, args, options)
       .then((result) => {
-        debugger;
         callResult.value.setFinal(
-          // @ts-ignore
-          `Gas Used: ${result?.result?.gasUsed}, Fee: ${result?.tx?.encodedTx?.fee} aetto`,
+          `Gas Used: ${result?.result?.gasUsed}, Fee: ${toAe(
+            // @ts-ignore
+            result?.tx?.encodedTx?.fee
+            // @ts-ignore
+          )} ae (${result?.tx?.encodedTx?.fee} aetto)`,
           JSON.stringify(result?.decodedResult)
         );
       })
