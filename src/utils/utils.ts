@@ -19,11 +19,11 @@ export const defaultCallOptions = {
   callData: "",
 };
 
-export class Result {
+export class Result<T> {
   error?: string;
   info?: string;
   final: boolean = false;
-  data?: string;
+  data?: T;
 
   setError(error: string) {
     this.error = error;
@@ -38,7 +38,7 @@ export class Result {
     this.data = undefined;
   }
 
-  setFinal(info: string, data?: string) {
+  setFinal(info: string, data?: T) {
     this.info = info;
     this.error = undefined;
     this.final = true;

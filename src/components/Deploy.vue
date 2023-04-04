@@ -1,19 +1,14 @@
 <template>
-  <div class="w-1/2 p-4 bg-gray-200 rounded-sm shadow" v-if="byteCode">
+  <div
+    class="w-1/2 p-4 bg-gray-200 rounded-sm shadow"
+    v-if="compileResult.final"
+  >
     <h2 class="py-2">
       Byte Code
-      <span
-        class="block w-full text-xs"
-        v-bind:class="{
-          'text-red': !contractInstance,
-          'text-green': contractInstance,
-        }"
-      >
-        {{ deployResult.info }}
-      </span>
+      <span class="block w-full text-xs">{{ deployResult.info }}</span>
     </h2>
     <textarea
-      v-model="byteCode"
+      v-model="compileResult.data!.byteCode"
       class="h-16 w-full font-mono bg-black text-white text-xs mb-4 p-4"
     ></textarea>
 
@@ -139,6 +134,6 @@ import { storeToRefs } from "pinia";
 import { useContractStore } from "../stores/contractStore";
 
 const contractStore = useContractStore();
-const { byteCode, deployData, deployResult } = storeToRefs(contractStore);
-const { contractInstance, deployContract } = contractStore;
+const { compileResult, deployData, deployResult } = storeToRefs(contractStore);
+const { deployContract } = contractStore;
 </script>

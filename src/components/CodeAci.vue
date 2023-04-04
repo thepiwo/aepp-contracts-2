@@ -13,7 +13,7 @@
     <div class="flex">
       <div class="relative w-8/12 pr-1">
         <codemirror
-          v-model="contractCode"
+          v-model="compileData.contractCode"
           :autofocus="true"
           :indent-with-tab="true"
           :tab-size="2"
@@ -33,10 +33,10 @@
       </div>
     </div>
 
-    <div class="mt-2 mb-2" v-if="compileError">
+    <div class="mt-2 mb-2" v-if="compileResult.error">
       <label class="text-xs block mb-1 text-red">Compile Errors:</label>
       <textarea
-        v-model="compileError"
+        v-model="compileResult.error"
         class="h-16 w-full text-red-500 bg-black text-xs mb-4 p-4 font-mono"
       ></textarea>
     </div>
@@ -67,7 +67,7 @@
         <button
           v-if="isConnected"
           class="mt-2 mr-2 rounded-r-full bg-black hover:bg-purple-500 text-white p-2 px-4"
-          @click="initializeContractFromAci(contractAddress)"
+          @click="initializeContractFromAci(contractAddress, aci)"
         >
           at Address
         </button>
@@ -82,12 +82,12 @@ import { javascript } from "@codemirror/lang-javascript";
 import { storeToRefs } from "pinia";
 import { useContractStore } from "../stores/contractStore";
 import { useSdkStore } from "../stores/sdkStore";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 const extensions = [javascript(), oneDark];
 
 const contractStore = useContractStore();
-const { contractCode, aci, compileError } = storeToRefs(contractStore);
+const { compileData, compileResult, deployResult } = storeToRefs(contractStore);
 const {
   compileContractFromSource,
   initializeContractFromAci,
@@ -98,4 +98,22 @@ const sdkStore = useSdkStore();
 const { isConnected } = storeToRefs(sdkStore);
 
 const contractAddress = ref("");
+const aci = ref("");
+
+// want those watch here to only react to changes from store but still have local models
+watch(
+  deployResult,
+  () => {
+    contractAddress.value = deployResult.value.data || "";
+  },
+  { deep: true }
+);
+
+watch(
+  compileResult,
+  () => {
+    aci.value = compileResult.value.data?.aci || "";
+  },
+  { deep: true }
+);
 </script>
