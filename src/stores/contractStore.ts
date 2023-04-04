@@ -80,6 +80,14 @@ export const useContractStore = defineStore("contract", () => {
           compileResult.value.data?.aci || "",
           deployResult.value.data
         );
+      })
+      .catch((error) => {
+        debugger;
+        if (error instanceof Error)
+          compileResult.value.setError(
+            error.message.replaceAll("compile error:\n", "")
+          );
+        return undefined;
       });
   }
 
